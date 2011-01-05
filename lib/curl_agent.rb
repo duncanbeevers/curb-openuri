@@ -4,6 +4,14 @@ require 'curb'
 require 'uri'
 
 class CurlAgent
+  OPEN_URI_OPEN_OPTIONS = [
+    :proxy, :proxy_http_basic_authentication, :http_basic_authentication,
+    :content_length_proc, :progress_proc,
+    :read_timeout,
+    :ssl_ca_cert, :ssl_verify_mode,
+    :ftp_active_mode,
+    :redirect ]
+
   # See CurlAgent::open for explanation about options
   def initialize(url, options = {})
     @curl = Curl::Easy.new(url)
@@ -16,16 +24,55 @@ class CurlAgent
     @curl.timeout = 30
     @performed = false
 
-    options ||= {}
-    options.each {|k, v|
-      # Strings will be passed as headers, as in original open-uri
-      next unless k.is_a? Symbol
+    # Duplicate the functionality of the OpenURI open options
+    # by transforming options into Curl::Easy configuration directives
+    headers = {}
+    curl_config = {}
+    
+    if options
+      curl_config[:proxy_url] = options[:proxy].to_s if options[:proxy]
+      curl_config[:proxypwd] = options[:proxy_http_basic_authentication].to_s if options[:proxy_http_basic_authentication]
+      curl_config[:userpwd] = options[:http_basic_authentication].to_s if options[:http_basic_authentication]
+      if options[:content_length_proc] || options[:progress_proc]
+        on_content_length = options[:content_length_proc]
+        on_progress = options[:progress_proc]
+
+        curl_config[:on_progress] = lambda { |dl_total, dl_now, ul_total, ul_now|
+          # on_content_length, if it was defined, is a one-shot
+          if on_content_length && self.downloaded_content_length
+            on_content_length.call(self.downloaded_content_length)
+            on_content_length = nil
+          end
+          
+          on_progress.call(dl_now) if on_progress
+        }
+      end
+      curl_config[:timeout] = options[:read_timeout] if options[:read_timeout]
+
+      # These SSL configs are untested, just skethed in
+      curl_config[:cacert] = options[:ssl_ca_cert].to_s if options[:ssl_ca_cert]
+      curl_config[:ssl_verify_host] = options[:ssl_verify_mode] if options[:ssl_verify_mode]
+      curl_config[:follow_location] = true if options[:redirect]
+
+      # I didn't see any support in Curl::Easy for specifying FTP active/passive
+      # so :ftp_active_mode is just discarded
+
+      # Remove any OpenURI open options from the Curl::Easy configuration
+      OPEN_URI_OPEN_OPTIONS.each { |(k, _)| options.delete(k) }
+
+      (options || {}).each do |k, v|
+        # Strings will be passed as headers, as in original open-uri
+        (k.is_a?(Symbol) ? curl_config : headers)[k] = v
+      end
+    end
+
+    # Configure curl
+    curl_config.each do |k, v|
       @curl.send("#{k}=".intern, v)
-      options.delete(k)
-    }
+    end
 
     # All that's left should be considered headers
-    @curl.headers.merge!(options)
+    @curl.headers.merge!(headers)
   end
 
   # Do the actual fetch, after which it's possible to call body_str method
