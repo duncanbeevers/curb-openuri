@@ -171,6 +171,22 @@ EOF
         end
       end
 
+      describe ':ssl_ca_cert' do
+        it 'shall set :cacert' do
+          ca_cert = "Certificate Authority Certificate"
+          @curl_easy.should_receive(:'cacert=').once.with(ca_cert)
+          CurlAgent.open(@url, :ssl_ca_cert => ca_cert)
+        end
+      end
+
+      describe ':ssl_verify_mode' do
+        it 'shall set :ssl_verify_host' do
+          verify_mode = 1 # OpenSSL::SSL::VERIFY_PEER
+          @curl_easy.should_receive(:'ssl_verify_host=').once.with(true)
+          CurlAgent.open(@url, :ssl_verify_mode => verify_mode)
+        end
+      end
+
       describe ':ftp_active_mode' do
         it 'shall not be sent to curlagent' do
           @curl_easy.should_not_receive(:'ftp_active_mode')

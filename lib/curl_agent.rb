@@ -54,7 +54,7 @@ class CurlAgent
 
       # These SSL configs are untested, just skethed in
       curl_config[:cacert] = options[:ssl_ca_cert].to_s if options[:ssl_ca_cert]
-      curl_config[:ssl_verify_host] = options[:ssl_verify_mode] if options[:ssl_verify_mode]
+      curl_config[:ssl_verify_host] = true if options[:ssl_verify_mode]
       curl_config[:follow_location] = true if options[:redirect]
 
       # I didn't see any support in Curl::Easy for specifying FTP active/passive
