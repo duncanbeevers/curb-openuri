@@ -114,6 +114,38 @@ EOF
         end
       end
 
+      describe ':content_length_proc' do
+        it 'shall be invoked with the content length' do
+          threaded_on_progress = nil
+          @curl_easy.should_receive(:downloaded_content_length).and_return(10)
+          @curl_easy.should_receive(:'on_progress=').once.with do |on_progress|
+            threaded_on_progress = on_progress
+            true
+          end
+          cl_proc = mock('content_length_proc')
+          cl_proc.should_receive(:call).with(10)
+
+          CurlAgent.open(@url, :content_length_proc => cl_proc)
+          threaded_on_progress.call(nil, nil, nil, nil)
+          threaded_on_progress.call(nil, nil, nil, nil)
+        end
+
+        it 'shall not be invoked if downloaded_content_length is not available' do
+          threaded_on_progress = nil
+          @curl_easy.should_receive(:downloaded_content_length).
+            at_least(1).and_return(nil)
+ 
+          @curl_easy.should_receive(:'on_progress=').once.with do |on_progress|
+            threaded_on_progress = on_progress
+            true
+          end
+
+          CurlAgent.open(@url, :content_length_proc => mock('content_length_proc'))
+          threaded_on_progress.call(nil, nil, nil, nil)
+          threaded_on_progress.call(nil, nil, nil, nil)
+        end
+      end
+
       describe ':read_timeout' do
         it 'shall set :timeout' do
           @curl_easy.should_receive(:'timeout=').once.with(10)

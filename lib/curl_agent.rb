@@ -39,9 +39,12 @@ class CurlAgent
 
         curl_config[:on_progress] = lambda { |dl_total, dl_now, ul_total, ul_now|
           # on_content_length, if it was defined, is a one-shot
-          if on_content_length && self.downloaded_content_length
-            on_content_length.call(self.downloaded_content_length)
-            on_content_length = nil
+          if on_content_length
+            content_length = self.downloaded_content_length
+            if content_length
+              on_content_length.call(content_length)
+              on_content_length = nil
+            end
           end
           
           on_progress.call(dl_now) if on_progress
