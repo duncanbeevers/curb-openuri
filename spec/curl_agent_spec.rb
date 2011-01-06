@@ -146,6 +146,24 @@ EOF
         end
       end
 
+      describe ':progress_proc' do
+        it 'shall be invoked with current progress' do
+          threaded_on_progress = nil
+          @curl_easy.stub!(:downloaded_content_length)
+          @curl_easy.should_receive(:'on_progress=').once.with do |on_progress|
+            threaded_on_progress = on_progress
+            true
+          end
+          pg_proc = mock('progress_proc')
+          pg_proc.should_receive(:call).with(2).ordered
+          pg_proc.should_receive(:call).with(3).ordered
+
+          CurlAgent.open(@url, :progress_proc => pg_proc)
+          threaded_on_progress.call(nil, 2, nil, nil)
+          threaded_on_progress.call(nil, 3, nil, nil)
+        end
+      end
+
       describe ':read_timeout' do
         it 'shall set :timeout' do
           @curl_easy.should_receive(:'timeout=').once.with(10)
