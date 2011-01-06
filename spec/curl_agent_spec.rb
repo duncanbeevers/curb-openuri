@@ -89,6 +89,54 @@ EOF
       CurlAgent.open(@url, :timeout => 10)
     end
 
+    describe 'with OpenURI::OpenRead option' do
+      describe ':proxy' do
+        it 'shall set :proxy_url' do
+          proxy_url = 'http://proxy.example.com:8000'
+          @curl_easy.should_receive(:'proxy_url=').once.with(proxy_url)
+          CurlAgent.open(@url, :proxy => proxy_url)
+        end
+      end
+
+      describe ':proxy_http_basic_authentication' do
+        it 'shall set :proxypwd' do
+          proxypwd = 'example_username:secret'
+          @curl_easy.should_receive(:'proxypwd=').once.with(proxypwd)
+          CurlAgent.open(@url, :proxy_http_basic_authentication => proxypwd)
+        end
+      end
+
+      describe ':http_basic_authentication' do
+        it 'shall set :userpwd' do
+          userpwd = 'example_username:secret'
+          @curl_easy.should_receive(:'userpwd=').once.with(userpwd)
+          CurlAgent.open(@url, :http_basic_authentication => userpwd)
+        end
+      end
+
+      describe ':read_timeout' do
+        it 'shall set :timeout' do
+          @curl_easy.should_receive(:'timeout=').once.with(10)
+          CurlAgent.open(@url, :read_timeout => 10)
+        end
+      end
+
+      describe ':ftp_active_mode' do
+        it 'shall not be sent to curlagent' do
+          @curl_easy.should_not_receive(:'ftp_active_mode')
+          CurlAgent.open(@url, :ftp_active_mode => 'discard')
+        end
+      end
+
+      describe ':redirect' do
+        it 'shall set :follow_location' do
+          @curl_easy.should_receive(:'follow_location=').once.with(true)
+          CurlAgent.open(@url, :redirect => true)
+        end
+      end
+
+    end
+
     it 'shall use block when provided' do
       CurlAgent.open(@url) {|f| f.read}.should == 'test'
     end
